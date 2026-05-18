@@ -4,3 +4,4 @@ __pycache__/
 .env
 data/chroma_db/
 data/repos/
+chroma_db/
