@@ -1,14 +1,53 @@
-<<<<<<< HEAD
-# AI Codebase Assistant
+# Codebase Intelligence
 
-AI-powered RAG system for chatting with code repositories.
+> AI-powered semantic search and Q&A over any codebase.
+
+**Live Demo:** https://ai-codebase-assistant-production.up.railway.app
+
+## What it does
+
+Upload any codebase as a `.zip` and instantly:
+- **Ask** natural language questions about your code
+- **Search** functions and classes semantically
+- **Summarize** the entire repository with AI
 
 ## Tech Stack
-- FastAPI
-- ChromaDB
-- SentenceTransformers
-- OpenAI API
-=======
-# ai-codebase-assistant
-An AI-powered system that allows users to interact with entire code repositories through natural language queries. The system ingests a GitHub repository or uploaded project, processes and indexes the codebase, and enables intelligent Q&amp;A over the code using Retrieval-Augmented Generation (RAG).
->>>>>>> 379695a9c5503b6d00d96a47cf688f042192b02c
+
+| Layer | Tech |
+|-------|------|
+| Backend | FastAPI, Python |
+| Embeddings | SentenceTransformers (`all-MiniLM-L6-v2`) |
+| Vector DB | ChromaDB |
+| LLM | Groq API (llama-3.3-70b) |
+| Frontend | React + Vite |
+| Deploy | Railway + Docker |
+
+## Architecture
+
+```
+ZIP Upload → File Chunking (AST) → Embeddings → ChromaDB
+                                                     ↓
+User Query → Embed Query → Semantic Search → Top-K Chunks → Groq LLM → Answer
+```
+
+## Features
+
+- Multi-session isolation (each upload gets unique collection)
+- AST-based Python chunking (functions, classes, methods)
+- Rich embeddings with metadata context
+- Auto docstring generation
+- Dual UI themes (Light / Dark)
+
+## Run Locally
+
+```bash
+git clone https://github.com/Dharanidhar-17-09-2006/ai-codebase-assistant
+cd ai-codebase-assistant
+pip install -r requirements.txt
+# add GROQ_API_KEY to .env
+uvicorn app.main:app --reload
+```
+
+## Resume
+
+> Built an AI codebase assistant using RAG pipeline (SentenceTransformers + ChromaDB + Groq LLM), FastAPI backend with semantic search, AST-based code chunking, auto docstring generation, and React frontend — deployed on Railway.
