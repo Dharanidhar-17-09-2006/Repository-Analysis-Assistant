@@ -1,73 +1,49 @@
-import os
 import logging
-from app.services.repo_loader import get_code_files, read_file
+from app.services.vector_store import get_collection
 from app.services.llm import summarize_repo
 
 logger = logging.getLogger(__name__)
 
-# Files that give the most signal about a repo
-KEY_FILE_NAMES = {
-    "readme.md", "readme.txt", "readme",
-    "main.py", "app.py", "server.py",
-    "requirements.txt", "pyproject.toml", "package.json",
-    "dockerfile", "docker-compose.yml"
-}
 
+def generate_repo_summary(collection_name: str) -> dict:
+    """
+    Fetches chunks from ChromaDB collection and sends to LLM for summarization.
+    Works for both uploaded zips and local repos.
+    """
+    try:
+        collection = get_collection(collection_name)
+        results = collection.get(include=["documents", "metadatas"])
+    except Exception as e:
+        return {"error": f"Could not fetch collection: {e}"}
 
-def build_file_tree(root: str, files: list[dict]) -> str:
-    """
-    Builds a simple readable file tree string from file list.
-    """
-    tree_lines = [f"{root}/"]
-    for file_info in files:
-        relative = file_info["path"].replace("\\", "/")
-        tree_lines.append(f"  {relative}")
-    return "\n".join(tree_lines)
+    if not results or not results["documents"]:
+        return {"error": "No chunks found in collection"}
 
+    # Build file tree from metadata
+    files_seen = {}
+    for meta in results["metadatas"]:
+        f = meta.get("file", "")
+        if f and f not in files_seen:
+            files_seen[f] = []
+        if f:
+            files_seen[f].append(meta.get("name", ""))
 
-def get_key_files(root: str) -> dict[str, str]:
-    """
-    Reads contents of key files (README, main, requirements etc.)
-    that give the most signal about the repo's purpose.
-    """
+    file_tree = "\n".join([
+        f"  {f}: {', '.join(names[:5])}"
+        for f, names in files_seen.items()
+    ])
+
+    # Sample key chunks as content (first 10, truncated)
     key_contents = {}
+    for doc, meta in zip(results["documents"][:10], results["metadatas"][:10]):
+        key = f"{meta.get('file')}::{meta.get('name')}"
+        key_contents[key] = doc[:400]
 
-    for dirpath, _, filenames in os.walk(root):
-        for filename in filenames:
-            if filename.lower() in KEY_FILE_NAMES:
-                full_path = os.path.join(dirpath, filename)
-                content = read_file(full_path)
-                if content:
-                    relative = os.path.relpath(full_path, root).replace("\\", "/")
-                    key_contents[relative] = content
-
-        # Only check top 2 levels — avoid deeply nested matches
-        depth = dirpath.replace(root, "").count(os.sep)
-        if depth >= 2:
-            break
-
-    return key_contents
-
-
-def generate_repo_summary(root: str) -> dict:
-    """
-    Builds file tree, reads key files, sends to LLM for summarization.
-    Returns summary + metadata.
-    """
-    all_files = list(get_code_files(root))
-
-    if not all_files:
-        return {"error": "No code files found in repository"}
-
-    file_tree = build_file_tree(root, all_files)
-    key_files = get_key_files(root)
-
-    logger.info(f"Summarizing repo: {len(all_files)} files, {len(key_files)} key files found")
-
-    summary = summarize_repo(file_tree, key_files)
+    summary = summarize_repo(file_tree, key_contents)
 
     return {
-        "total_files": len(all_files),
-        "key_files_analyzed": list(key_files.keys()),
+        "collection_name": collection_name,
+        "total_chunks": len(results["documents"]),
+        "files_found": len(files_seen),
         "summary": summary
     }

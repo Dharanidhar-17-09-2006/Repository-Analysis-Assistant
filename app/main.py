@@ -46,16 +46,6 @@ app = FastAPI(
     description="Semantic search and analysis over your codebase",
 )
 
-
-# ----------------------------
-# Routes
-# ----------------------------
-@app.get("/", tags=["Health"])
-def home():
-    """
-    Returns the status of the application, indicating whether it is running or not.
-    """
-    return {"status": "running"}
-
-
 app.include_router(repo_router, prefix="/repo", tags=["Repository"])
+from fastapi.staticfiles import StaticFiles
+app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
