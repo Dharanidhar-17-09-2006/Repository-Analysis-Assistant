@@ -6,17 +6,9 @@ logger = logging.getLogger(__name__)
 
 MODEL = "llama-3.3-70b-versatile"
 
-# ----------------------------
-# Lazy client — loads after .env is read
-# ----------------------------
 _client = None
 
 def get_client():
-    """
-    Retrieves the Groq client instance, initializing it with the GROQ_API_KEY if necessary. 
-    The client is reused across multiple calls to this function. 
-    Raises a RuntimeError if the GROQ_API_KEY is not set.
-    """
     global _client
     if _client is None:
         api_key = os.environ.get("GROQ_API_KEY")
@@ -26,15 +18,8 @@ def get_client():
     return _client
 
 
-# ----------------------------
-# Format chunks for prompt
-# ----------------------------
 def format_chunks_for_prompt(chunks: list[dict]) -> str:
-    """
-    Formats retrieved chunks into readable prompt context.
-    """
     formatted = []
-
     for i, chunk in enumerate(chunks, 1):
         block = f"""
 [Chunk {i}]
@@ -48,18 +33,10 @@ Code:
 {chunk.get('code')}
 """.strip()
         formatted.append(block)
-
     return "\n\n---\n\n".join(formatted)
 
 
-# ----------------------------
-# Answer query from chunks
-# ----------------------------
 def answer_query(query: str, chunks: list[dict]) -> str:
-    """
-    Sends top K retrieved chunks + user query to Groq LLM.
-    Returns the answer.
-    """
     if not chunks:
         return "No relevant code found to answer your question."
 
@@ -84,28 +61,14 @@ Answer:"""
         model=MODEL,
         max_tokens=1024,
         messages=[
-            {
-                "role": "system",
-                "content": "You are an expert software engineer helping users understand codebases."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
+            {"role": "system", "content": "You are an expert software engineer helping users understand codebases."},
+            {"role": "user", "content": prompt}
         ]
     )
-
     return response.choices[0].message.content
 
 
-# ----------------------------
-# Summarize repo
-# ----------------------------
 def summarize_repo(file_tree: str, key_file_contents: dict[str, str]) -> str:
-    """
-    Sends repo structure + key file contents to Groq LLM for summarization.
-    Returns a high-level repo summary.
-    """
     files_context = "\n\n".join([
         f"FILE: {path}\n{content[:500]}..."
         for path, content in key_file_contents.items()
@@ -121,7 +84,7 @@ KEY FILE CONTENTS (truncated):
 
 Provide a structured summary covering:
 1. What this project does (2-3 sentences)
-2. Tech stack and frameworks used (mention Groq API with llama-3.3-70b for LLM)
+2. Tech stack and frameworks used
 3. Key modules and what each does
 4. Entry points (main files, API routes, etc.)
 5. Any notable patterns or architecture decisions
@@ -132,15 +95,8 @@ Summary:"""
         model=MODEL,
         max_tokens=1024,
         messages=[
-            {
-                "role": "system",
-                "content": "You are an expert software engineer helping users understand codebases."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
+            {"role": "system", "content": "You are an expert software engineer helping users understand codebases."},
+            {"role": "user", "content": prompt}
         ]
     )
-
     return response.choices[0].message.content
