@@ -13,6 +13,7 @@ from app.services.zip_handler import extract_zip, cleanup_temp_dir
 from app.services.summarizer import generate_repo_summary
 from app.services.llm import answer_query
 from app.services.docstring_generator import process_file
+from app.services.git_handler import clone_repo
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -439,3 +440,49 @@ def generate_docstrings(body: DocstringRequest):
         "files": results,
         "reindex": store_result
     }
+
+@router.post("/index-url")
+async def index_from_url(body: dict):
+    github_url = body.get("url")
+    if not github_url:
+        raise HTTPException(status_code=400, detail="URL required")
+    
+    upload_id = str(uuid.uuid4())[:8]
+    repo_name = github_url.rstrip("/").split("/")[-1].replace(".git", "")
+    collection_name = f"{upload_id}_{repo_name}"
+    
+    temp_path = None
+    try:
+        temp_path = clone_repo(github_url)
+        # same pipeline as /upload from here
+        all_files = list(get_code_files(temp_path))
+        if not all_files:
+            raise HTTPException(status_code=422, detail="No supported code files found")
+        
+        all_chunks = []
+        for file_info in all_files:
+            content = read_file(file_info["path"])
+            if content is None:
+                continue
+            normalized_temp = temp_path.replace("\\", "/")
+            normalized_file = file_info["path"].replace("\\", "/")
+            relative_path = normalized_file.replace(normalized_temp, "").lstrip("/")
+            chunks = chunk_by_language(content, relative_path, file_info["language"])
+            all_chunks.extend(chunks)
+
+        embedded = embed_chunks(all_chunks)
+        result = store_chunks(embedded, collection_name=collection_name)
+
+        return {
+            "upload_id": upload_id,
+            "collection_name": collection_name,
+            "repo_url": github_url,
+            "files_scanned": len(all_files),
+            "chunks_found": len(all_chunks),
+            **result
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    finally:
+        if temp_path:
+            cleanup_temp_dir(temp_path)

@@ -2,8 +2,6 @@ import { useState, useRef } from "react";
 
 const API = "";
 
-// ─── THEMES ───────────────────────────────────────────────────────────────────
-
 const hackerStyles = `
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;800&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -22,7 +20,7 @@ const hackerStyles = `
   .session-badge { font-family: var(--mono); font-size: 0.65rem; color: var(--accent); background: rgba(0,255,157,0.08); border: 1px solid rgba(0,255,157,0.2); padding: 0.4rem 0.8rem; border-radius: 4px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .theme-toggle { font-family: var(--mono); font-size: 0.65rem; padding: 0.4rem 0.8rem; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
   .theme-toggle:hover { border-color: var(--accent2); color: var(--accent2); }
-  .upload-zone { border: 1.5px dashed var(--border); border-radius: 8px; padding: 2.5rem; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; background: var(--surface); margin-bottom: 2rem; }
+  .upload-zone { border: 1.5px dashed var(--border); border-radius: 8px; padding: 2.5rem; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; background: var(--surface); margin-bottom: 1rem; }
   .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(0,255,157,0.03); }
   .upload-zone input { display: none; }
   .upload-icon { font-size: 2rem; margin-bottom: 0.75rem; }
@@ -86,7 +84,7 @@ const saasStyles = `
   .session-badge { font-size: 0.72rem; color: var(--accent2); background: #eff6ff; border: 1px solid #bfdbfe; padding: 0.35rem 0.75rem; border-radius: 20px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .theme-toggle { font-size: 0.72rem; padding: 0.4rem 0.85rem; border-radius: 20px; border: 1px solid var(--border2); background: var(--surface); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; box-shadow: var(--shadow); }
   .theme-toggle:hover { border-color: var(--accent); color: var(--text); }
-  .upload-zone { border: 1.5px dashed var(--border2); border-radius: 12px; padding: 3rem 2rem; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--surface); margin-bottom: 2rem; box-shadow: var(--shadow); }
+  .upload-zone { border: 1.5px dashed var(--border2); border-radius: 12px; padding: 3rem 2rem; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--surface); margin-bottom: 1rem; box-shadow: var(--shadow); }
   .upload-zone:hover, .upload-zone.drag { border-color: var(--accent2); background: #f8fbff; box-shadow: var(--shadow-md); }
   .upload-zone input { display: none; }
   .upload-icon { font-size: 1.75rem; margin-bottom: 0.75rem; opacity: 0.6; }
@@ -130,10 +128,8 @@ const saasStyles = `
   .empty { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 4rem 0; line-height: 1.6; }
 `;
 
-// ─── APP ──────────────────────────────────────────────────────────────────────
-
 export default function App() {
-  const [theme, setTheme] = useState("saas"); // "saas" | "hacker"
+  const [theme, setTheme] = useState("saas");
   const [session, setSession] = useState(null);
   const [tab, setTab] = useState("ask");
   const [uploading, setUploading] = useState(false);
@@ -152,6 +148,9 @@ export default function App() {
   const [summary, setSummary] = useState(null);
   const [summarizing, setSummarizing] = useState(false);
 
+  const [githubUrl, setGithubUrl] = useState("");
+  const [indexing, setIndexing] = useState(false);
+
   async function handleUpload(file) {
     if (!file || !file.name.endsWith(".zip")) { setUploadStatus("error:Only .zip files supported"); return; }
     setUploading(true); setUploadStatus("loading:Uploading and indexing...");
@@ -164,6 +163,23 @@ export default function App() {
       setSummary(null); setAnswer(null); setSearchResults(null);
     } catch (e) { setUploadStatus(`error:${e.message}`); }
     finally { setUploading(false); }
+  }
+
+  async function handleIndexUrl() {
+    if (!githubUrl.trim()) return;
+    setIndexing(true); setUploadStatus("loading:Cloning and indexing...");
+    try {
+      const res = await fetch(`${API}/repo/index-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: githubUrl })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Failed");
+      setSession(data); setUploadStatus("success:Indexed successfully!");
+      setSummary(null); setAnswer(null); setSearchResults(null);
+    } catch (e) { setUploadStatus(`error:${e.message}`); }
+    finally { setIndexing(false); }
   }
 
   async function handleAsk() {
@@ -238,6 +254,15 @@ export default function App() {
           <div className="upload-icon">⬆</div>
           <div className="upload-title">{uploading ? "Indexing..." : "Drop your codebase zip"}</div>
           <div className="upload-hint">click or drag · .zip only · auto-indexed on upload</div>
+        </div>
+
+        <div className="input-row" style={{marginBottom:"1rem"}}>
+          <input className="input" placeholder="Or paste GitHub URL: https://github.com/user/repo"
+            value={githubUrl} onChange={e => setGithubUrl(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleIndexUrl()} />
+          <button className="btn btn-ghost" onClick={handleIndexUrl} disabled={indexing || !githubUrl.trim()}>
+            {indexing ? "..." : "Clone"}
+          </button>
         </div>
 
         {uploadStatus && (
@@ -343,7 +368,7 @@ export default function App() {
 
         {!session && !uploadStatus && (
           <div className="empty">
-            {isHacker ? "upload a codebase zip to begin" : "Upload a codebase zip to get started"}
+            {isHacker ? "upload a codebase zip to begin" : "Upload a codebase zip or paste a GitHub URL to get started"}
           </div>
         )}
       </div>
