@@ -48,6 +48,8 @@ For repos with 100s–1000s of files:
 - File tree is capped at 100 entries with a count of remaining files
 - Summary samples 1 representative chunk per unique file (up to 15 files) instead of top-N chunks from same file
 - Ask/Search are unaffected — full semantic search runs across all indexed chunks
+- Embedding batch size tuned to `16` to balance RAM and speed on free tier
+- Large repos (1000+ chunks) may take 3-5 minutes to index due to CPU constraints
 
 ## Run Locally
 
