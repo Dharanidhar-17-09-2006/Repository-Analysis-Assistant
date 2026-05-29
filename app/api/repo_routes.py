@@ -15,6 +15,8 @@ from app.services.llm import answer_query
 from app.services.docstring_generator import process_file
 from app.services.git_handler import clone_repo
 from chromadb.config import Settings
+from app.services.chunker import chunk_python_code, chunk_by_language
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -39,17 +41,6 @@ class AskRequest(BaseModel):
 class DocstringRequest(BaseModel):
     path: str = "."
     collection_name: str = "codebase"
-
-
-# ----------------------------
-# Safe language routing
-# ----------------------------
-def chunk_by_language(content: str, file_path: str, language: str) -> list[dict]:
-    """Routes file content to the appropriate chunker based on detected language."""
-    if language == "python":
-        return chunk_python_code(content, file_path)
-    logger.debug(f"No chunker for language '{language}', skipping: {file_path}")
-    return []
 
 
 # ----------------------------
