@@ -14,7 +14,7 @@ from app.services.summarizer import generate_repo_summary
 from app.services.llm import answer_query
 from app.services.docstring_generator import process_file
 from app.services.git_handler import clone_repo
-
+from chromadb.config import Settings
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -361,20 +361,23 @@ def ask(body: AskRequest):
 @router.delete("/session/{upload_id}")
 def cleanup_session(upload_id: str):
     """Deletes all ChromaDB collections associated with an upload_id."""
-    client = chromadb.PersistentClient(path="./chroma_db")
+    import chromadb
+    client = chromadb.PersistentClient(
+        path="./chroma_db",
+        settings=Settings(anonymized_telemetry=False)
+    )
     collections = client.list_collections()
-
+ 
     deleted = []
     for col in collections:
         if col.name.startswith(upload_id):
             client.delete_collection(col.name)
             deleted.append(col.name)
-
+ 
     if not deleted:
         raise HTTPException(status_code=404, detail=f"No collections found for upload_id: {upload_id}")
-
+ 
     return {"deleted": deleted}
-
 
 # ----------------------------
 # Generate docstrings
