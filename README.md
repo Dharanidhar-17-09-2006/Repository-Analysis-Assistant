@@ -2,7 +2,7 @@
 
 > AI-powered semantic search, Q&A, and summarization over any codebase.
 
-**Live Demo:** [https://ai-codebase-assistant-production.up.railway.app](https://huggingface.co/spaces/Dharanidhar1709/Repository-Analysis-Assistant)
+**Live Demo:** [https://huggingface.co/spaces/Dharanidhar1709/Repository-Analysis-Assistant](https://huggingface.co/spaces/Dharanidhar1709/Repository-Analysis-Assistant)
 
 ## What it does
 
