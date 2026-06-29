@@ -20,6 +20,7 @@ VALID_EXTENSIONS: dict[str, str] = {
     ".rs":    "rust",
     ".rb":    "ruby",
     ".ipynb": "notebook",
+    ".md": "markdown",
 }
 
 MAX_FILE_SIZE = 500_000
