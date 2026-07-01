@@ -29,7 +29,7 @@ def get_completion(messages: list, max_tokens: int = 1024) -> str:
             return response.choices[0].message.content
         except Exception as e:
             err = str(e).lower()
-            if any(k in err for k in ["deprecated", "decommission", "not found", "model"]):
+            if any(k in err for k in ["deprecated", "decommission", "not found", "does not exist", "invalid model"]):
                 logger.warning(f"Model {model} unavailable, trying next...")
                 continue
             raise e
