@@ -4,7 +4,10 @@ from groq import Groq
 
 logger = logging.getLogger(__name__)
 
-MODEL = "openai/gpt-oss-120b"
+MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+]
 
 _client = None
 
@@ -17,6 +20,20 @@ def get_client():
         _client = Groq(api_key=api_key)
     return _client
 
+def get_completion(messages: list, max_tokens: int = 1024) -> str:
+    for model in MODELS:
+        try:
+            response = get_client().chat.completions.create(
+                model=model, max_tokens=max_tokens, messages=messages
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            err = str(e).lower()
+            if any(k in err for k in ["deprecated", "decommission", "not found", "model"]):
+                logger.warning(f"Model {model} unavailable, trying next...")
+                continue
+            raise e
+    raise RuntimeError("All models failed")
 
 def format_chunks_for_prompt(chunks: list[dict]) -> str:
     formatted = []
@@ -35,15 +52,11 @@ Code:
         formatted.append(block)
     return "\n\n---\n\n".join(formatted)
 
-
 def answer_query(query: str, chunks: list[dict]) -> str:
     if not chunks:
         return "No relevant code found to answer your question."
-
     context = format_chunks_for_prompt(chunks)
-
     prompt = f"""You are an expert AI assistant that answers questions about a software codebase.
-
 You are given relevant code snippets retrieved from the codebase, ranked by semantic similarity.
 Answer the user's question based ONLY on the provided code context.
 If the answer cannot be determined from the context, say so clearly.
@@ -56,24 +69,16 @@ USER QUESTION:
 {query}
 
 Answer:"""
-
-    response = get_client().chat.completions.create(
-        model=MODEL,
-        max_tokens=1024,
-        messages=[
-            {"role": "system", "content": "You are an expert software engineer helping users understand codebases."},
-            {"role": "user", "content": prompt}
-        ]
-    )
-    return response.choices[0].message.content
-
+    return get_completion([
+        {"role": "system", "content": "You are an expert software engineer helping users understand codebases."},
+        {"role": "user", "content": prompt}
+    ])
 
 def summarize_repo(file_tree: str, key_file_contents: dict[str, str]) -> str:
     files_context = "\n\n".join([
         f"FILE: {path}\n{content[:500]}..."
         for path, content in key_file_contents.items()
     ])
-
     prompt = f"""You are an expert software engineer. Analyze this code repository and provide a clear summary.
 
 REPOSITORY FILE STRUCTURE:
@@ -90,13 +95,7 @@ Provide a structured summary covering:
 5. Any notable patterns or architecture decisions
 
 Summary:"""
-
-    response = get_client().chat.completions.create(
-        model=MODEL,
-        max_tokens=1024,
-        messages=[
-            {"role": "system", "content": "You are an expert software engineer helping users understand codebases."},
-            {"role": "user", "content": prompt}
-        ]
-    )
-    return response.choices[0].message.content
+    return get_completion([
+        {"role": "system", "content": "You are an expert software engineer helping users understand codebases."},
+        {"role": "user", "content": prompt}
+    ])
