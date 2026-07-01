@@ -1,7 +1,7 @@
 import ast
 import os
 import logging
-from app.services.llm import get_client, MODEL
+from app.services.llm import get_completion
 
 logger = logging.getLogger(__name__)
 
@@ -26,23 +26,10 @@ CODE:
 
 Docstring:"""
 
-    response = get_client().chat.completions.create(
-        model=MODEL,
-        max_tokens=150,
-        messages=[
-            {
-                "role": "system",
-                "content": "You are an expert Python developer who writes clean, concise docstrings."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    )
-
-    return response.choices[0].message.content.strip()
-
+    return get_completion([
+        {"role": "system", "content": "You are an expert Python developer who writes clean, concise docstrings."},
+        {"role": "user", "content": prompt}
+    ], max_tokens=150).strip()
 
 # ----------------------------
 # Inject docstring into source file
