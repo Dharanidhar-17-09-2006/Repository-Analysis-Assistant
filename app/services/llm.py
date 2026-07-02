@@ -47,7 +47,7 @@ Function/Class: {chunk.get('name')} ({chunk.get('type')})
 Score: {chunk.get('score')}
 
 Code:
-{chunk.get('code')}
+{chunk.get('code')[:1500] + '....' if chunk.get('code') else ''}
 """.strip()
         formatted.append(block)
     return "\n\n---\n\n".join(formatted)
