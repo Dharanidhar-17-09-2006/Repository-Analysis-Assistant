@@ -74,7 +74,3 @@ uvicorn app.main:app --reload
 | POST | `/repo/summarize` | AI summary of repository |
 | POST | `/repo/generate-docstrings` | Auto-generate missing docstrings |
 | DELETE | `/repo/session/{upload_id}` | Clean up ChromaDB collections |
-
-## Resume
-
-> Built an AI codebase assistant using a RAG pipeline (SentenceTransformers + ChromaDB + Groq LLM) with FastAPI backend, supporting Python AST chunking, Jupyter notebook indexing, multi-language support (Java, C, Go, Rust etc.), GitHub URL indexing, multi-user session isolation, smart large-repo summarization, and a React frontend with dual themes — deployed on Railway with Docker.
